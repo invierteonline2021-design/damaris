@@ -578,8 +578,9 @@
             const oldLevel = GAME.level;
 
             // Ajustamos tiempos para los 3 niveles
-            if (GAME.time < 30) GAME.level = 1;
-            else if (GAME.time < 60) GAME.level = 2;
+            // Ajustamos tiempos para los 3 niveles (MUCH HARDER / LONGER)
+            if (GAME.time < 45) GAME.level = 1;
+            else if (GAME.time < 90) GAME.level = 2;
             else GAME.level = 3;
 
             // Si supera el nivel 3, se queda en Eureka pero se vuelve más difícil
@@ -637,7 +638,9 @@
 
             // 3. Cantina (Boss)
             // Calculamos un "nivel de dificultad interno" que sigue subiendo aunque el nombre sea el mismo
-            let difficultyFactor = GAME.time / 30; // 0..1..2..
+            // 3. Cantina (Boss)
+            // Calculamos un "nivel de dificultad interno" que sigue subiendo aunque el nombre sea el mismo
+            let difficultyFactor = GAME.time / 45; // 0..1..2.. (Slower ramp up due to longer levels)
 
             CANTINA.phase += dt * (1 + difficultyFactor * 0.5);
             let cantinaTargetX = (GAME.width / 2) + Math.sin(CANTINA.phase) * (GAME.width / 2 - 60);
@@ -645,7 +648,7 @@
 
             // SPAWNING
             // Rate depende de la dificultad interna
-            const spawnRate = Math.max(0.15, 1.0 - (difficultyFactor * 0.2));
+            const spawnRate = Math.max(0.15, 0.8 - (difficultyFactor * 0.2)); // Faster spawn rate cap
             if (Math.random() < (dt / spawnRate)) {
                 spawnEntity(difficultyFactor);
                 spawnBarrier(difficultyFactor); // Try to spawn barrier
@@ -707,7 +710,11 @@
             let type = {};
             let sprite = SPRITES.wine;
             let isGiant = Math.random() < 0.1;
-            let speed = 150 + (difficulty * 50);
+            let isTurbo = Math.random() < 0.1; // 10% chance for TURBO speed
+
+            let speed = 250 + (difficulty * 80); // Higher base speed
+            if (isTurbo) speed *= 2.0; // DOUBLE SPEED
+
             let sizeScale = isGiant ? 1.8 : 1.0;
 
             // Probabilidades
@@ -796,7 +803,7 @@
                 w: barrierWidth,
                 h: 30,
                 isBarrier: true,
-                speed: 200 + (difficulty * 50),
+                speed: 300 + (difficulty * 60), // Faster barriers
                 color: Math.random() < 0.5 ? '#ff00cc' : '#3333ff' // Macuahuitl neon colors
             });
         }
