@@ -215,6 +215,60 @@
             font-size: 14px;
             opacity: 0.7;
         }
+
+        /* Responsive Mobile Styles */
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 35px;
+            }
+
+            h1 small {
+                font-size: 20px;
+            }
+
+            p {
+                font-size: 14px;
+                padding: 0 20px;
+                text-align: center;
+            }
+
+            button {
+                padding: 15px 30px;
+                font-size: 18px;
+                width: 80%;
+            }
+
+            #hud {
+                top: 10px;
+                left: 10px;
+                right: 10px;
+            }
+
+            .stat-box {
+                padding: 8px 12px;
+                border-radius: 10px;
+            }
+
+            .stat-label {
+                font-size: 11px;
+                margin-bottom: 4px;
+            }
+
+            .progress-track {
+                height: 8px;
+            }
+
+            #current-level-small {
+                font-size: 14px;
+                top: 50px;
+                padding: 3px 10px;
+            }
+
+            #level-display {
+                font-size: 28px;
+                top: 60px;
+            }
+        }
     </style>
 </head>
 
@@ -390,24 +444,24 @@
         });
 
         // --- CONTROLES TÁCTILES (MOBILE) ---
+        let touchInputX = null;
+
         window.addEventListener('touchstart', e => {
             if (!gameRunning) return; // Allow buttons to work
-            e.preventDefault(); // Evitar scroll/zoom
-            const touchX = e.touches[0].clientX;
-            if (touchX < window.innerWidth / 2) {
-                keys.left = true;
-                keys.right = false;
-            } else {
-                keys.right = true;
-                keys.left = false;
-            }
+            e.preventDefault();
+            touchInputX = e.touches[0].clientX;
+        }, { passive: false });
+
+        window.addEventListener('touchmove', e => {
+            if (!gameRunning) return;
+            e.preventDefault();
+            touchInputX = e.touches[0].clientX;
         }, { passive: false });
 
         window.addEventListener('touchend', e => {
             if (!gameRunning) return;
             e.preventDefault();
-            keys.left = false;
-            keys.right = false;
+            touchInputX = null;
         }, { passive: false });
 
         // --- SISTEMA DE PARTÍCULAS ---
@@ -526,15 +580,32 @@
             if (GAME.level > oldLevel) showLevelUp(GAME.level);
 
             // 2. Jugador
-            let inputDir = 0;
-            if (keys.left) inputDir = -1;
-            if (keys.right) inputDir = 1;
+            if (touchInputX !== null) {
+                // Direct Touch Control (Follow Finger)
+                let target = touchInputX;
 
-            if (GAME.drunk > 85 && Math.random() < 0.1) inputDir *= -1;
+                // Drunk Wobble
+                if (GAME.drunk > 50) {
+                    target += Math.sin(Date.now() / 200) * (GAME.drunk * 0.8);
+                }
 
-            PLAYER.vx += inputDir * PLAYER.speed * dt * 5;
-            PLAYER.vx *= PLAYER.friction;
-            PLAYER.x += PLAYER.vx * dt;
+                // Smooth movement towards finger
+                PLAYER.x += (target - PLAYER.x) * 10 * dt;
+
+                // Update VX for physics feel (tilt)
+                PLAYER.vx = (target - PLAYER.x) * 5;
+            } else {
+                // Keyboard Control
+                let inputDir = 0;
+                if (keys.left) inputDir = -1;
+                if (keys.right) inputDir = 1;
+
+                if (GAME.drunk > 85 && Math.random() < 0.1) inputDir *= -1;
+
+                PLAYER.vx += inputDir * PLAYER.speed * dt * 5;
+                PLAYER.vx *= PLAYER.friction;
+                PLAYER.x += PLAYER.vx * dt;
+            }
 
             // Limites
             if (PLAYER.x < 30) { PLAYER.x = 30; PLAYER.vx *= -0.5; }
