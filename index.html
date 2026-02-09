@@ -40,12 +40,13 @@
         /* UI Hud con Glassmorphism */
         #hud {
             position: absolute;
-            top: 20px;
-            left: 20px;
-            right: 20px;
+            top: 10px;
+            left: 10px;
+            right: 10px;
             pointer-events: none;
             display: flex;
-            justify-content: space-between;
+            flex-direction: column;
+            align-items: center;
             z-index: 10;
         }
 
@@ -132,23 +133,32 @@
         }
 
         #current-level-small {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            /* Movido un poco más abajo para evitar solapamiento si las barras son muy anchas */
-            top: 60px;
-            left: 50%;
-            transform: translateX(-50%);
+            /* Now part of the flow */
             text-align: center;
-            font-size: 18px;
+            font-size: 14px;
             font-weight: bold;
             color: #ccc;
             background: rgba(0, 0, 0, 0.5);
-            padding: 5px 15px;
+            padding: 5px 10px;
             border-radius: 20px;
             border: 1px solid #555;
             text-transform: uppercase;
+            white-space: nowrap;
+            margin: 0 5px;
+        }
+
+        #hud-top-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        #hud-bottom-row {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            margin-top: 5px;
         }
 
         /* Pantallas (Start / Game Over) */
@@ -259,9 +269,8 @@
             }
 
             #current-level-small {
-                font-size: 14px;
-                top: 50px;
-                padding: 3px 10px;
+                font-size: 10px;
+                padding: 2px 5px;
             }
 
             #level-display {
@@ -277,32 +286,36 @@
     <div id="game-container">
         <!-- HUD -->
         <div id="hud">
-            <div class="stat-box">
-                <div class="stat-label">
-                    <span>SALUD</span>
-                    <span id="life-val">100%</span>
+            <div id="hud-top-row">
+                <div class="stat-box">
+                    <div class="stat-label">
+                        <span>SALUD</span>
+                        <span id="life-val">100%</span>
+                    </div>
+                    <div class="progress-track">
+                        <div id="life-bar" class="progress-bar"></div>
+                    </div>
                 </div>
-                <div class="progress-track">
-                    <div id="life-bar" class="progress-bar"></div>
+
+                <div id="current-level-small">TERRAZAS</div>
+
+                <div class="stat-box" style="text-align: right;">
+                    <div class="stat-label">
+                        <span id="drunk-val">0%</span>
+                        <span>EBRIEDAD</span>
+                    </div>
+                    <div class="progress-track">
+                        <div id="drunk-bar" class="progress-bar"></div>
+                    </div>
                 </div>
             </div>
 
-            <div id="current-level-small">TERRAZAS</div>
-
-            <div class="stat-box" style="text-align: right;">
-                <div class="stat-label">
-                    <span id="drunk-val">0%</span>
-                    <span>EBRIEDAD</span>
-                </div>
-                <div class="progress-track">
-                    <div id="drunk-bar" class="progress-bar"></div>
-                </div>
-            </div>
-
-            <div class="stat-box" style="width: auto; min-width: 120px;">
-                <div class="stat-label" style="justify-content: center; margin-bottom: 0;">
-                    <span style="color: #00ffff; font-size: 16px;">DERRIBADOS: <span id="score-val"
-                            style="color: white;">0</span></span>
+            <div id="hud-bottom-row">
+                <div class="stat-box" style="width: auto; min-width: 120px; padding: 5px 15px;">
+                    <div class="stat-label" style="justify-content: center; margin-bottom: 0;">
+                        <span style="color: #00ffff; font-size: 16px;">DERRIBADOS: <span id="score-val"
+                                style="color: white;">0</span></span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -427,7 +440,10 @@
             w: 60, h: 60,
             vx: 0, vy: 0, speed: 600,
             friction: 0.9,
-            targetX: 0
+            vx: 0, vy: 0, speed: 600,
+            friction: 0.9,
+            targetX: 0,
+            doubleShotTimer: 0
         };
 
         const CANTINA = {
@@ -626,15 +642,21 @@
                 // --- AUTO FIRE (When touching) ---
                 if (!PLAYER.shootTimer) PLAYER.shootTimer = 0;
                 PLAYER.shootTimer -= dt;
+
+                // Double Shot Timer
+                if (PLAYER.doubleShotTimer > 0) PLAYER.doubleShotTimer -= dt;
+
                 if (PLAYER.shootTimer <= 0) {
                     PLAYER.shootTimer = 0.15; // Fire rate
-                    bullets.push({
-                        x: PLAYER.x,
-                        y: PLAYER.y - 30,
-                        w: 4, h: 15,
-                        speed: 800,
-                        color: '#00ffff' // Neon Cyan
-                    });
+
+                    if (PLAYER.doubleShotTimer > 0) {
+                        // DOUBLE SHOT
+                        bullets.push({ x: PLAYER.x - 10, y: PLAYER.y - 30, w: 4, h: 15, speed: 800, color: '#f1c40f' }); // Gold/Yellow
+                        bullets.push({ x: PLAYER.x + 10, y: PLAYER.y - 30, w: 4, h: 15, speed: 800, color: '#f1c40f' });
+                    } else {
+                        // Single Shot
+                        bullets.push({ x: PLAYER.x, y: PLAYER.y - 30, w: 4, h: 15, speed: 800, color: '#00ffff' }); // Neon Cyan
+                    }
                 }
             } else {
                 // Keyboard Control
@@ -849,16 +871,21 @@
             } else {
                 // AYUDAS
                 const r3 = Math.random();
-                if (r3 < 0.4) {
-                    // GOTA AGUA (Bajo)
+
+                // Lemon Rarity: Starts at 5%, increases by 2% per level (approx based on difficulty)
+                // difficultyFactor is roughly 0..1..2..3
+                const lemonChance = 0.05 + (difficulty * 0.02);
+
+                if (r3 < lemonChance) {
+                    // LIMON (RARE POWER UP: DOUBLE SHOT)
+                    sprite = SPRITES.limon;
+                    type = { heal: 15, sober: 20, color: '#f1c40f', name: 'Limon' };
+                } else if (r3 < 0.6) {
+                    // GOTA AGUA
                     sprite = SPRITES.gotaAgua;
                     type = { heal: 5, sober: 10, color: '#3498db', name: 'Gota Agua' };
-                } else if (r3 < 0.7) {
-                    // LIMON (Medio - user request: > Gota, < Botella)
-                    sprite = SPRITES.limon;
-                    type = { heal: 15, sober: 20, color: '#2ecc71', name: 'Limon' };
                 } else {
-                    // BOTELLA AGUA (Alto - user request: > Limon)
+                    // BOTELLA AGUA
                     sprite = SPRITES.botellaAgua;
                     type = { heal: 25, sober: 40, color: '#00d2ff', name: 'Botella Agua' };
                 }
@@ -940,6 +967,12 @@
                 GAME.life += e.type.heal;
                 GAME.drunk -= e.type.sober;
                 label = `+${Math.round(e.type.heal)}`;
+
+                // Power up: Limon
+                if (e.type.name === 'Limon') {
+                    PLAYER.doubleShotTimer = 10;
+                    floatingTexts.push(new FloatingText(e.x, e.y - 70, "DOUBLE SHOT!", "#f1c40f", 25));
+                }
             }
 
             if (e.isGiant) label += "!";
